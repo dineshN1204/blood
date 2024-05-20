@@ -1,14 +1,14 @@
 const express = require('express')
+require('dotenv').config()
 const connectDb = require('./configs/db')
 const users = require('./routes/user')
-require('dotenv').config()
 const app = express()
 
+app.use('/users',users)
 connectDb()
 app.get('/',(req,res)=>{
     res.send('Home page')
 })
-app.use('/users',users)
 app.listen(process.env.PORT,()=>{
     console.log(`Server is running on ${process.env.PORT}`)
 })

@@ -1,4 +1,4 @@
-const UserModel = require("../models/user-model");
+const UserModel = require('../models/user-model');
 const {v4:uuidv4} = require('uuid')
 const bcrypt = require('bcryptjs')
 const nodemailer = require('nodemailer')
@@ -7,7 +7,7 @@ exports.signup = async (req, res) => {
   const { email, password, username } = req.body
   console.log(email, password, username)
 
-  const user =await new UserModel.findOne({email})
+  let user =await UserModel.findOne({email})
   if(user){
     return res.status(400).json({message:'Email already registered'})
   }
@@ -16,15 +16,15 @@ exports.signup = async (req, res) => {
   const activationCode = uuidv4()
   
   //encrypt password 
-  const salt =await bcrypt.genSalt(10)
-  const hashPassword =await bcrypt.hash(password,salt)
+  const salt = await bcrypt.genSalt(10)
+  const hashPassword = await bcrypt.hash(password,salt)
 
   user = new UserModel({
     username,
     email,
     password:hashPassword,
     activationCode
-  }) ,
+  })
 
   await user.save()
 
@@ -34,7 +34,7 @@ exports.signup = async (req, res) => {
     port:587,
     auth:{
         user:process.env.EMAIL_USER,
-        pass:process.env.USER_PASS
+        pass:process.env.EMAIL_PASS
     }
   })
   const activationLink = `http://localhost:${process.env.PORT}/auth/activate/${activationCode}`
@@ -42,9 +42,9 @@ exports.signup = async (req, res) => {
   //mailoptions that send for the user
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to:email,
+    to: email,
     subject: `Please verify yout email address`,
-    Text:`Click the below link to verify your email address ${activationLink}`
+    text:`Click the below link to verify your email address ${activationLink}`
   }
 
   transport.sendMail(mailOptions,(err,info)=>{
@@ -59,7 +59,7 @@ exports.signup = async (req, res) => {
 }
 
 //activating email for signup
-exports.activation = async (req,res)=>{
+exports.activate = async (req,res)=>{
     const {activationCode} = req.params
     let user = await UserModel.findOne({activationCode})
     if(!user){
@@ -74,11 +74,23 @@ exports.activation = async (req,res)=>{
 exports.signin = async (req,res)=>{
     const {email, password} = req.body
     let user = await UserModel.findOne({email}) 
-}
+    if(!user){
+      return res.status(400).json({message:'Email not found'})
+    }
 
     const isMatching = await bcrypt.compare(password,user.password)
+    if(!isMatching){
+      return res.status(400).json({message:'Incorrect password'})
+    }
+    if(!user.isActivated){
+      return res.status(400).json({message:'Account has not yet activated please check your email and activate first to login'})
+    }
 
-
+    return res.status(200).json({
+      message:'Login successfull',
+      user
+    })
+}
 
 
 
