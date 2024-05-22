@@ -3,6 +3,13 @@ const {v4:uuidv4} = require('uuid')
 const bcrypt = require('bcryptjs')
 const nodemailer = require('nodemailer')
 
+exports.gettingData = async (req,res)=>{
+    console.log(req.body);
+    UserModel.find()
+    .then(response=>res.send(response))
+    .catch(err=>console.log(err))
+}
+
 exports.signup = async (req, res) => {
   const { email, password, username } = req.body
   console.log(email, password, username)
@@ -27,7 +34,6 @@ exports.signup = async (req, res) => {
   })
 
   await user.save()
-
   //email sending code
   const transport = nodemailer.createTransport({
     host: 'smtp.gmail.com',
@@ -35,7 +41,8 @@ exports.signup = async (req, res) => {
     auth:{
         user:process.env.EMAIL_USER,
         pass:process.env.EMAIL_PASS
-    }
+    },
+    // secure:true
   })
   const activationLink = `http://localhost:${process.env.PORT}/auth/activate/${activationCode}`
 
@@ -49,10 +56,10 @@ exports.signup = async (req, res) => {
 
   transport.sendMail(mailOptions,(err,info)=>{
     if(err){
-        return res.status(500).json({message:'Cannot send activation link'})
+        return res.status(500).json({message:'Cannot send activation link',err})
     }
     else {
-        return res.status(200).json({message:'Activation link sent to your email please verify to proceed login'})
+        return res.status(200).json({message:'Activation link sent to your email please verify to proceed login',info})
     }
   })
 
@@ -63,7 +70,7 @@ exports.activate = async (req,res)=>{
     const {activationCode} = req.params
     let user = await UserModel.findOne({activationCode})
     if(!user){
-        res.status(500).json({message:'Cannot send activation link'})
+        res.status(500).json({message:'Not sent activation link to the mail'})
     }
     user.isActivated = true
     user.save()
